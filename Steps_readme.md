@@ -5,7 +5,9 @@ npm run docker:up
 npm run docker:down
 
 # run npm i in api and web
-npm i && npm i -w apps/api && npm i -w apps/web
+npm i
+npm i -w apps/api 
+npm i -w apps/web
 
 # dev (local): web + api  (works on most shells)
 npm run dev
