@@ -1,0 +1,25 @@
+# Node
+node_modules/
+npm-debug.log
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+pnpm-lock.yaml
+
+# Nx cache
+.nx/cache/
+.nx/workspace-data/
+
+# Build outputs
+dist/
+out/
+.next/
+
+# Env files
+.env
+*.env.local
+
+
+
+.cursor/rules/nx-rules.mdc
+.github/instructions/nx.instructions.md

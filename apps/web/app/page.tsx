@@ -1,0 +1,1 @@
+export default function Page(){return(<main><h1>Auth + MinIO Upload</h1><p>Use Register → Login → Upload.</p></main>)}
