@@ -30,8 +30,8 @@ jobs:
       - name: Build & push API
         uses: docker/build-push-action@v6
         with:
-          context: ./apps/api            # 👈 build context = app folder
-          file: /apps/api/Dockerfile    # 👈 or just "Dockerfile" if it lives there
+          context: ./apps/api           # 👈 context app folder
+          file: ./apps/api/Dockerfile   # or: file: Dockerfile
           push: true
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/api:latest
