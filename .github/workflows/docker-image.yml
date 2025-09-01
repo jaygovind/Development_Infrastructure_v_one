@@ -30,8 +30,8 @@ jobs:
       - name: Build & push API
         uses: docker/build-push-action@v6
         with:
-          context: ./apps/api           # 👈 context app folder
-          file: ./apps/api/Dockerfile   # or: file: Dockerfile
+          context: .          # 👈 context app folder
+          file: apps/api/Dockerfile   # or: file: Dockerfile
           push: true
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/api:latest
@@ -40,8 +40,8 @@ jobs:
       - name: Build & push Web
         uses: docker/build-push-action@v6
         with:
-          context: ./apps/web            # 👈 build context = app folder
-          file: ./apps/web/Dockerfile    # 👈 or just "Dockerfile" if it lives there
+          context: .           # 👈 build context = app folder
+          file: apps/web/Dockerfile    # 👈 or just "Dockerfile" if it lives there
           push: true
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/web:latest
