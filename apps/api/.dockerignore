@@ -1,6 +1,12 @@
-node_modules
-dist
-Dockerfile
-.dockerignore
+.git
+**/node_modules
+**/dist
+**/.next
+**/out
+**/.turbo
+**/.vercel
+*.log
 .env
 .env*.local
+Dockerfile
+.dockerignore
