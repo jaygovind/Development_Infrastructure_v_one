@@ -13,5 +13,5 @@ export default function RegisterPage() {
     const data = await res.json().catch(()=>({}))
     setMsg(res.ok ? 'Registered! Now login.' : (data?.message || 'Failed'))
   }
-  return (<main><h1>Register</h1><form onSubmit={onSubmit}><input placeholder="Name (optional)" value={name} onChange={e=>setName(e.target.value)} /><input placeholder="Email" value={email} onChange={e=>setEmail(e.target.value)} /><input placeholder="Password" type="password" value={password} onChange={e=>setPassword(e.target.value)} /><button type="submit">Create account</button></form>{msg && <p>{msg}</p>}</main>)
+  return (<main><h1>Register Page</h1><form onSubmit={onSubmit}><input placeholder="Name (optional)" value={name} onChange={e=>setName(e.target.value)} /><input placeholder="Email" value={email} onChange={e=>setEmail(e.target.value)} /><input placeholder="Password" type="password" value={password} onChange={e=>setPassword(e.target.value)} /><button type="submit">Create account</button></form>{msg && <p>{msg}</p>}</main>)
 }
