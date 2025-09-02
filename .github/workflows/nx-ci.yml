@@ -31,9 +31,8 @@ jobs:
         with:
           filter: tree:0
           fetch-depth: 0
-
       # Uncomment if you’ve run `nx connect` and want task distribution
-      # - run: npx nx start-ci-run --distribute-on="3 linux-medium-js" --stop-agents-after="build"
+       run: npx nx start-ci-run --distribute-on="3 linux-medium-js" --stop-agents-after="build"
 
       - uses: actions/setup-node@v4
         with:
