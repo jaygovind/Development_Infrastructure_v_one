@@ -1,57 +1,78 @@
-name: Nx CI
+name: CI
 
 on:
-  pull_request:
   push:
     branches: [main]
+  pull_request:
 
 concurrency:
   group: nx-ci-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  actions: read
+  contents: read
+
+# Shared ENV (available to all jobs)
+env:
+  CI: "true"
+  NX_CLOUD_ACCESS_TOKEN: ${{ secrets.NX_CLOUD_ACCESS_TOKEN }}
+  NX_DISABLE_CLOUD: ${{ secrets.NX_CLOUD_ACCESS_TOKEN == '' && 'true' || 'false' }}
+  REGISTRY: ghcr.io
+  IMAGE_OWNER: ${{ tolower(github.repository_owner) }}
+
 jobs:
   verify:
-    name: Lint • Test • Build (affected only)
+    name: Nx • Lint • Test • Build (affected)
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    env:
-      NX_DISABLE_CLOUD: ${{ secrets.NX_CLOUD_ACCESS_TOKEN == '' && 'true' || 'false' }}
-      NX_CLOUD_ACCESS_TOKEN: ${{ secrets.NX_CLOUD_ACCESS_TOKEN }}
-      CI: "true"
+
     steps:
       - uses: actions/checkout@v4
         with:
+          filter: tree:0
           fetch-depth: 0
+
+      # Uncomment if you’ve run `nx connect` and want task distribution
+      # - run: npx nx start-ci-run --distribute-on="3 linux-medium-js" --stop-agents-after="build"
+
       - uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: npm
-      - run: npm ci
+
+      - run: npm ci --legacy-peer-deps
+
       - uses: nrwl/nx-set-shas@v4
-      - run: npx nx print-affected --target=build --select=projects || true
-      - run: npx nx affected -t lint --parallel=3
-      - run: npx nx affected -t test --parallel=3 --configuration=ci || true
-      - run: npx nx affected -t build --parallel=3
+
+      # Record logs to Nx Cloud (optional) by prefixing with `nx-cloud record --`
+      - run: npx nx affected -t lint test build
+
+      # Self-healing CI suggestions (non-blocking)
+      - run: npx nx fix-ci
+        if: always()
 
   docker:
-    name: Build & Push Docker (only on main)
+    name: Build & Push Docker (main only)
     needs: verify
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
-    env:
-      REGISTRY: ghcr.io
-      IMAGE_OWNER: ${{ toLower(github.repository_owner) }}
     outputs:
       api-digest: ${{ steps.push-api.outputs.digest }}
       web-digest: ${{ steps.push-web.outputs.digest }}
+
     steps:
       - uses: actions/checkout@v4
+        with:
+          filter: tree:0
+          fetch-depth: 0
+
       - uses: docker/setup-buildx-action@v3
-      - uses: docker/login-action@v3
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
@@ -67,6 +88,7 @@ jobs:
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/api:latest
             ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/api:${{ github.run_number }}
+
       - name: Build & push Web
         id: push-web
         uses: docker/build-push-action@v6
@@ -78,16 +100,16 @@ jobs:
             ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/web:latest
             ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/web:${{ github.run_number }}
 
-  release:
+  release-info:
     name: Release Info
     needs: docker
+    if: needs.docker.result == 'success'
     runs-on: ubuntu-latest
     steps:
       - name: Print image digests
         run: |
-          echo "API image digest: ${{ needs.docker.outputs.api-digest }}"
-          echo "Web image digest: ${{ needs.docker.outputs.web-digest }}"
-      
-      # (Optional) Example: trigger Railway / Kubernetes / etc.
+          echo "API digest: ${{ needs.docker.outputs.api-digest }}"
+          echo "Web digest: ${{ needs.docker.outputs.web-digest }}"
+      # Example: trigger deploy using the image refs above
       # - name: Deploy to Railway
       #   run: railway up --service api --image ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/api:latest
