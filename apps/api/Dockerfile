@@ -1,26 +1,32 @@
+# apps/api/Dockerfile
 FROM node:20-alpine AS build
 RUN apk add --no-cache libc6-compat openssl
-WORKDIR /app/apps/api
+WORKDIR /app
 
-# 1) Copy ONLY api manifests (ensure lockfile exists & tracked)
-COPY apps/api/package.json apps/api/package-lock.json ./
+# Root manifests + API manifest
+COPY package.json package-lock.json ./
+COPY apps/api/package.json apps/api/package.json
 
-# 2) Clean, deterministic install (api-only)
-RUN npm ci
+# Install all workspaces (dev deps included for build)
+RUN npm ci --include=dev
 
-# 3) Copy api sources (includes prisma/)
-COPY apps/api ./
+# Copy repo
+COPY . .
 
-# 4) Build (runs prisma generate first because of script)
-RUN npm run build
+# Generate client (will be v5.17.0 due to overrides)
+RUN npx prisma generate --schema apps/api/prisma/schema.prisma
 
+# Build API (script: prisma generate && tsc)
+RUN npm --workspace apps/api run build
 
-# -------- Runtime --------
+# ---- runtime ----
 FROM node:20-alpine
 RUN apk add --no-cache libc6-compat openssl
+WORKDIR /app
+COPY --from=build /app/package.json /app/package-lock.json ./
+COPY --from=build /app/node_modules /app/node_modules
 
 WORKDIR /app/apps/api
-COPY --from=build /app/apps/api/node_modules ./node_modules
 COPY --from=build /app/apps/api/dist ./dist
 COPY --from=build /app/apps/api/prisma ./prisma
 COPY --from=build /app/apps/api/package*.json ./

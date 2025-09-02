@@ -33,6 +33,7 @@ jobs:
           context: .          # 👈 context app folder
           file: apps/api/Dockerfile   # or: file: Dockerfile
           push: true
+          no-cache: true 
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/api:latest
             ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/api:${{ github.run_number }}
