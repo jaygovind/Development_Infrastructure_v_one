@@ -5,18 +5,25 @@ on:
   push:
     branches: [main]
 
+concurrency:
+  group: nx-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+# Shared env for all jobs
+env:
+  REGISTRY: ghcr.io
+  IMAGE_OWNER: ${{ tolower(github.repository_owner) }}
+  CI: "true"
+  NX_CLOUD_ACCESS_TOKEN: ${{ secrets.NX_CLOUD_ACCESS_TOKEN }}
+  # Disable cloud if token is empty
+  NX_DISABLE_CLOUD: ${{ secrets.NX_CLOUD_ACCESS_TOKEN == '' && 'true' || 'false' }}
+
 jobs:
   verify:
     name: Lint • Test • Build (affected only)
     runs-on: ubuntu-latest
-
     permissions:
       contents: read
-
-    env:
-      # Set if you enable Nx Cloud (recommended for remote cache):
-      NX_CLOUD_ACCESS_TOKEN: ${{ secrets.NX_CLOUD_ACCESS_TOKEN }}
-      CI: "true"
 
     steps:
       - name: Checkout
@@ -33,45 +40,36 @@ jobs:
       - name: Install
         run: npm ci
 
-      # Compute base/head SHAs for Nx affected
       - name: Set Nx SHAs
         uses: nrwl/nx-set-shas@v4
 
-      # Optional: show what’s affected (nice for debugging)
-      - name: Print affected
-        run: npx nx print-affected --target=build --select=projects
+      - name: Print affected (build)
+        run: npx nx print-affected --target=build --select=projects || true
 
-      # Lint only what changed
       - name: Lint (affected)
         run: npx nx affected -t lint --parallel=3
 
-      # Test only what changed (skip if you don’t have tests yet)
       - name: Test (affected)
         run: npx nx affected -t test --parallel=3 --configuration=ci || true
 
-      # Build only what changed
       - name: Build (affected)
         run: npx nx affected -t build --parallel=3
 
-  # Optional: build & push Docker images AFTER Nx build succeeds (main only)
   docker:
     name: Build & Push Docker (only on main)
     needs: verify
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-
     permissions:
       contents: read
       packages: write
 
-    env:
-      REGISTRY: ghcr.io
-      IMAGE_OWNER: ${{ github.repository_owner }}
-
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - uses: docker/setup-buildx-action@v3
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
       - name: Login to GHCR
         uses: docker/login-action@v3
@@ -80,7 +78,6 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # API image
       - name: Build & push API
         uses: docker/build-push-action@v6
         with:
@@ -91,7 +88,6 @@ jobs:
             ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/api:latest
             ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/api:${{ github.run_number }}
 
-      # Web image
       - name: Build & push Web
         uses: docker/build-push-action@v6
         with:
