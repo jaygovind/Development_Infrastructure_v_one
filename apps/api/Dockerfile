@@ -1,32 +1,42 @@
 # apps/api/Dockerfile
-FROM node:20-alpine
+FROM node:20-alpine AS build
 
-# System deps for Prisma on Alpine
+# Needed for Prisma on Alpine
 RUN apk add --no-cache libc6-compat openssl
 
-# Work from repo root inside container
-WORKDIR /app
+# Work inside the API app so ./prisma/schema.prisma resolves
+WORKDIR /app/apps/api
 
-# 1) Copy ONLY package manifests first (better layer caching)
-COPY package.json package-lock.json ./
-# If your api has its own package.json (likely):
-COPY apps/api/package.json apps/api/package.json
+# 1) Copy only API manifests first for better layer caching
+COPY apps/api/package*.json ./
 
-# 2) Install workspace deps at root (resolves inter-workspace deps correctly)
+# 2) Install deps for the API
 RUN npm ci
 
-# 3) Copy the whole repo (now that deps are cached)
-COPY . .
+# 3) Copy the API source (including prisma) from the repo root context
+COPY apps/api ./
 
-# 4) Generate Prisma client using the correct schema path
-RUN npx prisma generate --schema apps/api/prisma/schema.prisma
+# 4) Generate Prisma client (schema path is now valid)
+RUN npx prisma generate --schema ./prisma/schema.prisma
 
-# 5) Build only the API workspace (adjust if your script name differs)
-RUN npm --workspace apps/api run build
+# 5) Build Nest app
+RUN npm run build
+
+
+# --- Runtime image (smaller) ---
+FROM node:20-alpine
+
+RUN apk add --no-cache libc6-compat openssl
+WORKDIR /app/apps/api
+
+# Only copy what we need to run
+COPY --from=build /app/apps/api/node_modules ./node_modules
+COPY --from=build /app/apps/api/dist ./dist
+COPY --from=build /app/apps/api/prisma ./prisma
+COPY --from=build /app/apps/api/package*.json ./
 
 ENV NODE_ENV=production
 ENV PORT=4000
 
 EXPOSE 4000
-# If Nest outputs to apps/api/dist/main.js
-CMD ["node", "apps/api/dist/main.js"]
+CMD ["node","dist/main.js"]
