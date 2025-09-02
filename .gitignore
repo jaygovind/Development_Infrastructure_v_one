@@ -3,8 +3,10 @@ node_modules/
 npm-debug.log
 yarn-debug.log*
 yarn-error.log*
-package-lock.json
+# package-lock.json KO IGNORE NAHI KARNA
+# pnpm ya yarn use karte ho to unka lockfile ignore karo:
 pnpm-lock.yaml
+yarn.lock
 
 # Nx cache
 .nx/cache/
@@ -19,7 +21,11 @@ out/
 .env
 *.env.local
 
+# IDE / Editor junk
+.cursor/
+.vscode/
+.DS_Store
 
-
+# Nx helper docs
 .cursor/rules/nx-rules.mdc
 .github/instructions/nx.instructions.md
