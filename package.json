@@ -1,10 +1,7 @@
 {
   "name": "next-nest-auth-minio-starter",
   "private": true,
-  "workspaces": [
-    "apps/web",
-    "apps/api"
-  ],
+  "workspaces": ["apps/*"],
   "scripts": {
     "dev:web": "npm --workspace apps/web run dev",
     "dev:api": "npm --workspace apps/api run start:dev",
@@ -16,10 +13,11 @@
     "prisma:studio": "npm -w apps/api run prisma:studio"
   },
   "devDependencies": {
-    "concurrently": "^8.2.2",
-    "prisma": "^6.15.0"
+    "concurrently": "8.2.2",
+    "prisma": "5.17.0",
+    "@types/node": "20.14.10"
   },
   "dependencies": {
-    "@prisma/client": "^6.15.0"
+    "@prisma/client": "5.17.0"
   }
 }
