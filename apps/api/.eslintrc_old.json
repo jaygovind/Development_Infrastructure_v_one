@@ -1,0 +1,24 @@
+{
+  "root": true,
+  "ignorePatterns": ["dist/**/*"],
+  "env": {
+    "node": true,
+    "es2022": true
+  },
+  "parserOptions": {
+    "project": ["apps/api/tsconfig.json"],
+    "tsconfigRootDir": "../../"
+  },
+  "overrides": [
+    {
+      "files": ["**/*.ts"],
+      "parser": "@typescript-eslint/parser",
+      "plugins": ["@typescript-eslint"],
+      "extends": [
+        "eslint:recommended",
+        "plugin:@typescript-eslint/recommended"
+      ],
+      "rules": {}
+    }
+  ]
+}

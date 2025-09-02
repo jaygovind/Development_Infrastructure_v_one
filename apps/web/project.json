@@ -1,0 +1,25 @@
+{
+  "name": "web",
+  "root": "apps/web",
+  "sourceRoot": "apps/web",
+  "targets": {
+    "build": {
+      "executor": "nx:run-commands",
+      "options": { "command": "npm --workspace apps/web run build" }
+    },
+  "lint": {
+  "executor": "@nx/eslint:lint",
+  "options": {
+    "lintFilePatterns": ["apps/web/**/*.{ts,tsx,js,jsx}"]
+  }
+},
+    "test": {
+      "executor": "nx:run-commands",
+      "options": { "command": "echo \"no tests yet\"" }
+    },
+    "serve": {
+      "executor": "nx:run-commands",
+      "options": { "command": "npm --workspace apps/web run dev" }
+    }
+  }
+}

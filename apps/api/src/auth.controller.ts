@@ -8,7 +8,6 @@ export class AuthController {
   @Post('register')
   async register(@Body() body: { email: string; password: string; name?: string }) {
     try {
-      debugger
       return await this.authService.register(body);
     } catch (e: any) {
       throw new HttpException(e.message || 'Registration failed', HttpStatus.BAD_REQUEST);
