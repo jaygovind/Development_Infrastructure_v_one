@@ -25,7 +25,12 @@ npm run prisma:studio
  npm run -w apps/api prisma:generate
   npm run -w apps/api prisma:migrate:dev
 
-  # for docker  Local test before pushing:
+  # for docker  Local test for api before pushing:
   docker build -f apps/api/Dockerfile -t api-test .
   docker run --rm -p 4000:4000 api-test
+
+   # for docker  Local test for api before pushing:
+  docker builder prune -af
+docker build --no-cache -t web-test -f apps/web/Dockerfile .
+docker run --rm -p 3000:3000 web-tes
 
