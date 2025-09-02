@@ -1,30 +1,30 @@
 FROM node:20-alpine AS build
 RUN apk add --no-cache libc6-compat openssl
-WORKDIR /app
+WORKDIR /app/apps/api
 
-# 1) root manifests + api manifest (for caching)
-COPY package.json package-lock.json ./
-COPY apps/api/package.json apps/api/package.json
+# 1) Copy ONLY api manifests (ensure lockfile exists & tracked)
+COPY apps/api/package.json apps/api/package-lock.json ./
 
-# 2) install all workspaces with root lockfile
+# 2) Clean, deterministic install (api-only)
 RUN npm ci
 
-# 3) copy full repo
-COPY . .
+# 3) Copy api sources (includes prisma/)
+COPY apps/api ./
 
-# 4) prisma client for API
-RUN npx prisma generate --schema apps/api/prisma/schema.prisma
+# 4) Build (runs prisma generate first because of script)
+RUN npm run build
 
-# 5) build only API workspace
-RUN npm --workspace apps/api run build
 
+# -------- Runtime --------
 FROM node:20-alpine
 RUN apk add --no-cache libc6-compat openssl
+
 WORKDIR /app/apps/api
+COPY --from=build /app/apps/api/node_modules ./node_modules
 COPY --from=build /app/apps/api/dist ./dist
 COPY --from=build /app/apps/api/prisma ./prisma
 COPY --from=build /app/apps/api/package*.json ./
-COPY --from=build /app/node_modules ./node_modules
+
 ENV NODE_ENV=production
 ENV PORT=4000
 EXPOSE 4000
