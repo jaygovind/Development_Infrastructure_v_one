@@ -1,4 +1,4 @@
-name: Nx CI + CD (Stable & Reliable)
+name: Nx CI + CD (Stable Docker Deploy)
 
 on:
   push:
@@ -41,14 +41,14 @@ jobs:
     strategy:
       matrix:
         service: [api, web]
-      max-parallel: 1   # sequential run for stability
+      max-parallel: 1   # sequential run
     steps:
       - uses: actions/checkout@v4
 
       - name: Install Railway CLI
         run: npm install -g @railway/cli
 
-      - name: Deploy
+      - name: Deploy via Dockerfile
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
         run: |
@@ -56,10 +56,10 @@ jobs:
           retries=3
           if [ "${{ matrix.service }}" == "api" ]; then
             SERVICE_ID=896433a2-649c-4d47-b397-1c2e4918b4fe
-            PATH_DOCKER=.railway/api
+            PATH_DOCKER=.railway/docker.api
           else
             SERVICE_ID=651af99c-48dd-4d98-85f4-a0bc78710924
-            PATH_DOCKER=.railway/web
+            PATH_DOCKER=.railway/docker.web
           fi
 
           until [ $retries -le 0 ]; do
