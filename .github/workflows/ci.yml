@@ -1,4 +1,4 @@
-name: Nx CI + CD (Final Stable)
+name: Nx CI + CD (Stable & Reliable)
 
 on:
   push:
@@ -37,6 +37,7 @@ jobs:
     name: Deploy API + Web Sequentially
     runs-on: ubuntu-latest
     needs: verify
+    timeout-minutes: 30
     strategy:
       matrix:
         service: [api, web]
