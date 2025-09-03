@@ -38,7 +38,7 @@ jobs:
       - name: Install Railway CLI
         run: npm install -g @railway/cli
       - name: Deploy API
-        run: railway up --service 896433a2-649c-4d47-b397-1c2e4918b4fe --ci
+        run: railway up --service 896433a2-649c-4d47-b397-1c2e4918b4fe --ci -- --dockerfile .railway/Dockerfile.api
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
 
@@ -51,6 +51,6 @@ jobs:
       - name: Install Railway CLI
         run: npm install -g @railway/cli
       - name: Deploy Web
-        run: railway up --service 651af99c-48dd-4d98-85f4-a0bc78710924 --ci
+        run: railway up --service 651af99c-48dd-4d98-85f4-a0bc78710924 --ci -- --dockerfile .railway/Dockerfile.web
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
