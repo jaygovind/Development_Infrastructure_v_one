@@ -2,25 +2,29 @@
 FROM node:20-alpine AS build
 WORKDIR /app
 
-# Install dependencies
+# Copy root manifests
 COPY ../../package.json ../../package-lock.json ./
-COPY ../../apps/web/package.json ./package.json
+
+# Copy Web manifest
+COPY ../../apps/web/package.json ./apps/web/package.json
+
+# Install dependencies (workspace-aware)
 RUN npm ci --include=dev
 
 # Copy repo
 COPY ../../ ./
 
-# Make sure public exists
+# Ensure public exists
 RUN mkdir -p apps/web/public
 
-# Build only web
+# Build web
 RUN npm --workspace apps/web run build
 
 # ---------- Runtime ----------
 FROM node:20-alpine AS runtime
 WORKDIR /app
 
-# Copy build artifacts
+# Copy Next.js build output
 COPY --from=build /app/apps/web/.next ./.next
 COPY --from=build /app/apps/web/public ./public
 COPY --from=build /app/apps/web/package*.json ./
