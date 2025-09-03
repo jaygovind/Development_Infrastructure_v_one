@@ -45,9 +45,9 @@ jobs:
       - name: Deploy
         run: |
           if [ "${{ matrix.service }}" == "api" ]; then
-            railway up --ci --service 896433a2-649c-4d47-b397-1c2e4918b4fe -- --dockerfile=.railway/Dockerfile.api
+            railway up --ci --service 896433a2-649c-4d47-b397-1c2e4918b4fe --path .railway/api
           else
-            railway up --ci --service 651af99c-48dd-4d98-85f4-a0bc78710924 -- --dockerfile=.railway/Dockerfile.web
+            railway up --ci --service 651af99c-48dd-4d98-85f4-a0bc78710924 --path .railway/web
           fi
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
