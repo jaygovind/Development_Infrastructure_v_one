@@ -20,18 +20,25 @@ RUN npx prisma generate --schema apps/api/prisma/schema.prisma
 RUN npm --workspace apps/api run build
 
 # ---- runtime ----
+# ---- runtime ----
 FROM node:20-alpine
 RUN apk add --no-cache libc6-compat openssl
+
+# Go directly to API folder
 WORKDIR /app
-COPY --from=build /app/package.json /app/package-lock.json ./
+
+# Copy only API package.json (has "start")
+COPY --from=build /app/apps/api/package*.json ./
+
+# Copy node_modules from build
 COPY --from=build /app/node_modules /app/node_modules
 
-WORKDIR /app/apps/api
+# Copy dist + prisma
 COPY --from=build /app/apps/api/dist ./dist
 COPY --from=build /app/apps/api/prisma ./prisma
-COPY --from=build /app/apps/api/package*.json ./
 
 ENV NODE_ENV=production
 ENV PORT=4000
 EXPOSE 4000
-CMD ["node","dist/main.js"]
+
+CMD ["npm","start"]
