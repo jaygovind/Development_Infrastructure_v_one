@@ -1,9 +1,13 @@
-name: Nx CI + CD (Final Working)
+name: Nx CI + CD (Final Stable)
 
 on:
   push:
     branches:
       - main
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   verify:
@@ -30,12 +34,13 @@ jobs:
         run: npx nx affected --target=build --parallel=3
 
   deploy:
-    name: Deploy API + Web in Parallel
+    name: Deploy API + Web Sequentially
     runs-on: ubuntu-latest
     needs: verify
     strategy:
       matrix:
         service: [api, web]
+      max-parallel: 1   # sequential run for stability
     steps:
       - uses: actions/checkout@v4
 
@@ -43,12 +48,22 @@ jobs:
         run: npm install -g @railway/cli
 
       - name: Deploy
-        run: |
-          if [ "${{ matrix.service }}" == "api" ]; then
-            railway up --ci --service 896433a2-649c-4d47-b397-1c2e4918b4fe --path .railway/api
-          else
-            railway up --ci --service 651af99c-48dd-4d98-85f4-a0bc78710924 --path .railway/web
-          fi
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-          
+        run: |
+          set -e
+          retries=3
+          if [ "${{ matrix.service }}" == "api" ]; then
+            SERVICE_ID=896433a2-649c-4d47-b397-1c2e4918b4fe
+            PATH_DOCKER=.railway/api
+          else
+            SERVICE_ID=651af99c-48dd-4d98-85f4-a0bc78710924
+            PATH_DOCKER=.railway/web
+          fi
+
+          until [ $retries -le 0 ]; do
+            railway up --ci --service $SERVICE_ID --path $PATH_DOCKER && break
+            retries=$((retries-1))
+            echo "Retrying deploy for ${{ matrix.service }}... ($retries left)"
+            sleep 10
+          done
