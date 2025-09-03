@@ -56,14 +56,15 @@ jobs:
           retries=3
           if [ "${{ matrix.service }}" == "api" ]; then
             SERVICE_ID=896433a2-649c-4d47-b397-1c2e4918b4fe
-            PATH_DOCKER=.railway/docker.api
+            DOCKER_FOLDER=.railway/docker.api
           else
             SERVICE_ID=651af99c-48dd-4d98-85f4-a0bc78710924
-            PATH_DOCKER=.railway/docker.web
+            DOCKER_FOLDER=.railway/docker.web
           fi
 
           until [ $retries -le 0 ]; do
-            railway up --ci --service $SERVICE_ID --path $PATH_DOCKER && break
+            echo "Deploying ${{ matrix.service }}..."
+            railway up --ci --service $SERVICE_ID $DOCKER_FOLDER && break
             retries=$((retries-1))
             echo "Retrying deploy for ${{ matrix.service }}... ($retries left)"
             sleep 10
