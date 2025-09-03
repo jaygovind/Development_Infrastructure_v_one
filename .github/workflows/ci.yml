@@ -8,11 +8,16 @@ on:
 
 permissions:
   actions: read
-  contents: read
+  contents: write   # needed for release job (tagging, pushing)
 
 jobs:
-  main:
+  verify:
+    name: Lint • Test • Build (affected only)
     runs-on: ubuntu-latest
+
+    env:
+      NX_CLOUD_ACCESS_TOKEN: ${{ secrets.NX_CLOUD_ACCESS_TOKEN }}
+
     steps:
       - uses: actions/checkout@v4
         with:
@@ -34,3 +39,28 @@ jobs:
 
       - run: npx nx fix-ci
         if: always()
+
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+    needs: verify   # release only runs if verify succeeds
+    if: github.ref == 'refs/heads/main'
+
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      NX_CLOUD_ACCESS_TOKEN: ${{ secrets.NX_CLOUD_ACCESS_TOKEN }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - run: npm ci --legacy-peer-deps
+
+      # Example: use semantic-release (adjust to your setup)
+      - run: npx semantic-release
