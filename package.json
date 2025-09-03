@@ -5,6 +5,7 @@
     "apps/*"
   ],
   "scripts": {
+   
     "dev:web": "npm --workspace apps/web run dev",
     "dev:api": "npm --workspace apps/api run start:dev",
     "dev": "concurrently -n web,api -c auto \"npm:dev:web\" \"npm:dev:api\"",

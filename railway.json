@@ -1,0 +1,6 @@
+{
+  "build": {
+    "api": "dockerfile ./apps/api/Dockerfile",
+    "web": "dockerfile ./apps/web/Dockerfile"
+  }
+}
