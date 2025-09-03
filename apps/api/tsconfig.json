@@ -7,7 +7,10 @@
     "types": ["node"],
     "esModuleInterop": true,
     "skipLibCheck": true,
-    "baseUrl": "./"
+    "baseUrl": "./",
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "strict": false,
   },
   "include": ["src/**/*"]
 }
