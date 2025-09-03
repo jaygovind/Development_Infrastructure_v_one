@@ -1,4 +1,4 @@
-name: CI
+name: Nx CI + CD
 
 on:
   push:
@@ -6,61 +6,52 @@ on:
       - main
   pull_request:
 
-permissions:
-  actions: read
-  contents: write   # needed for release job (tagging, pushing)
-
 jobs:
   verify:
     name: Lint • Test • Build (affected only)
     runs-on: ubuntu-latest
-
-    env:
-      NX_CLOUD_ACCESS_TOKEN: ${{ secrets.NX_CLOUD_ACCESS_TOKEN }}
-      
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          filter: tree:0
 
-      - uses: actions/setup-node@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: 'npm'
 
-      - run: npm ci --legacy-peer-deps
-      - uses: nrwl/nx-set-shas@v4
+      - name: Install dependencies
+        run: npm install
 
-      # Start Nx Cloud CI run
-      - run: npx nx-cloud start-ci-run --distribute-on="3 linux-medium-js" --stop-agents-after="build"
+      - name: Nx Affected - Lint
+        run: npx nx affected --target=lint --parallel=3
 
-      - run: npx nx affected -t lint test build
+      - name: Nx Affected - Test
+        run: npx nx affected --target=test --parallel=3
 
-      - run: npx nx fix-ci
-        if: always()
+      - name: Nx Affected - Build
+        run: npx nx affected --target=build --parallel=3
 
-  release:
-    name: Release
+  deploy-api:
+    name: Deploy API to Railway
     runs-on: ubuntu-latest
-    needs: verify   # release only runs if verify succeeds
-    if: github.ref == 'refs/heads/main'
-
-    env:
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      NX_CLOUD_ACCESS_TOKEN: ${{ secrets.NX_CLOUD_ACCESS_TOKEN }}
-
+    needs: verify
+    if: success()  # only run if verify passed
     steps:
       - uses: actions/checkout@v4
+      - uses: railwayapp/railway-action@v1
         with:
-          fetch-depth: 0
+          serviceId: 896433a2-649c-4d47-b397-1c2e4918b4fe
+          apiToken: ${{ secrets.RAILWAY_TOKEN }}
 
-      - uses: actions/setup-node@v4
+  deploy-web:
+    name: Deploy Web to Railway
+    runs-on: ubuntu-latest
+    needs: verify
+    if: success()
+    steps:
+      - uses: actions/checkout@v4
+      - uses: railwayapp/railway-action@v1
         with:
-          node-version: 20
-          cache: 'npm'
-
-      - run: npm ci --legacy-peer-deps
-
-      # Example: use semantic-release (adjust to your setup)
-      - run: npx semantic-release
+          serviceId: 651af99c-48dd-4d98-85f4-a0bc78710924
+          apiToken: ${{ secrets.RAILWAY_TOKEN }}
