@@ -3,17 +3,16 @@ FROM node:20-alpine AS build
 RUN apk add --no-cache libc6-compat openssl
 WORKDIR /app
 
-# Copy root manifests + api manifest
-COPY package.json package-lock.json ./          
-COPY apps/api/package.json ./                    
-
-# Install all workspaces (dev deps included for build)
+# Copy root manifests + API manifest
+COPY ../../package.json ../../package-lock.json ./       
+COPY ../../apps/api/package.json ./package.json          
+# Install workspaces
 RUN npm ci --include=dev
 
 # Copy repo
-COPY . .                                        
+COPY ../../ ./
 
-# Generate prisma client
+# Generate Prisma client
 RUN npx prisma generate --schema apps/api/prisma/schema.prisma
 
 # Build API
@@ -24,7 +23,7 @@ FROM node:20-alpine
 RUN apk add --no-cache libc6-compat openssl
 WORKDIR /app/apps/api
 
-# Copy API package.json only
+# Copy API package.json
 COPY --from=build /app/apps/api/package*.json ./
 
 # Copy node_modules
