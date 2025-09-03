@@ -1,4 +1,4 @@
-name: Nx CI + CD (Stable Docker Deploy)
+name: Nx CI + CD (Railway Docker Ready)
 
 on:
   push:
@@ -41,7 +41,7 @@ jobs:
     strategy:
       matrix:
         service: [api, web]
-      max-parallel: 1   # sequential run
+      max-parallel: 1   # Sequential deploy for stability
     steps:
       - uses: actions/checkout@v4
 
