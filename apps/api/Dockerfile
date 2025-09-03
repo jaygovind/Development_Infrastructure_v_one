@@ -24,13 +24,12 @@ RUN npm --workspace apps/api run build
 FROM node:20-alpine
 RUN apk add --no-cache libc6-compat openssl
 
-# Go directly to API folder
-WORKDIR /app
+WORKDIR /app/apps/api
 
-# Copy only API package.json (has "start")
+# Copy API package.json only
 COPY --from=build /app/apps/api/package*.json ./
 
-# Copy node_modules from build
+# Copy node_modules (needed for runtime)
 COPY --from=build /app/node_modules /app/node_modules
 
 # Copy dist + prisma
@@ -42,3 +41,4 @@ ENV PORT=4000
 EXPOSE 4000
 
 CMD ["npm","start"]
+
