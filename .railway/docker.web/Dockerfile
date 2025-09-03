@@ -4,22 +4,21 @@ WORKDIR /app
 
 # Copy root manifests
 COPY ../../package.json ../../package-lock.json ./
-COPY package.json ./  
+COPY ../../apps/web/package.json ./package.json
 
-# Install dependencies (workspace aware)
+# Install dependencies
 RUN npm ci --include=dev
 
-# Copy full repo for build
+# Copy full repo
 COPY ../../ ./
 
-# Build ONLY web workspace
+# Build web workspace
 RUN npm --workspace apps/web run build
 
 # ---------- Runtime ----------
-FROM node:20-alpine AS runtime
+FROM node:20-alpine
 WORKDIR /app
 
-# Copy built files
 COPY --from=build /app/apps/web/.next ./.next
 COPY --from=build /app/apps/web/public ./public
 COPY --from=build /app/apps/web/package*.json ./
