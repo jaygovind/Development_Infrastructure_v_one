@@ -4,14 +4,11 @@ on:
   push:
     branches:
       - main
-  pull_request:
 
 jobs:
   verify:
     name: Lint • Test • Build (affected only)
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
     steps:
       - uses: actions/checkout@v4
 
@@ -36,22 +33,24 @@ jobs:
     name: Deploy API to Railway
     runs-on: ubuntu-latest
     needs: verify
-    if: success()  # only run if verify passed
     steps:
       - uses: actions/checkout@v4
-      - uses: railwayapp/railway-action@v1
-        with:
-          serviceId: 896433a2-649c-4d47-b397-1c2e4918b4fe
-          apiToken: ${{ secrets.RAILWAY_TOKEN }}
+      - name: Install Railway CLI
+        run: npm install -g @railway/cli
+      - name: Deploy API
+        run: railway up --service 896433a2-649c-4d47-b397-1c2e4918b4fe --ci
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
 
   deploy-web:
     name: Deploy Web to Railway
     runs-on: ubuntu-latest
     needs: verify
-    if: success()
     steps:
       - uses: actions/checkout@v4
-      - uses: railwayapp/railway-action@v1
-        with:
-          serviceId: 651af99c-48dd-4d98-85f4-a0bc78710924
-          apiToken: ${{ secrets.RAILWAY_TOKEN }}
+      - name: Install Railway CLI
+        run: npm install -g @railway/cli
+      - name: Deploy Web
+        run: railway up --service 651af99c-48dd-4d98-85f4-a0bc78710924 --ci
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
