@@ -6,6 +6,13 @@ on:
       - main
   pull_request:
 
+env:
+  CI: "true"
+  NX_CLOUD_ACCESS_TOKEN: ${{ secrets.NX_CLOUD_ACCESS_TOKEN }}
+  NX_DISABLE_CLOUD: ${{ secrets.NX_CLOUD_ACCESS_TOKEN == '' && 'true' || 'false' }}
+  REGISTRY: ghcr.io
+  IMAGE_OWNER: ${{ tolower(github.repository_owner) }}
+
 jobs:
   verify:
     name: Lint • Test • Build
@@ -45,7 +52,7 @@ jobs:
       - name: Login to GHCR
         uses: docker/login-action@v3
         with:
-          registry: ghcr.io
+          registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
@@ -56,8 +63,8 @@ jobs:
           file: Dockerfile
           push: true
           tags: |
-            ghcr.io/${{ github.repository_owner }}/api:latest
-            ghcr.io/${{ github.repository_owner }}/api:${{ github.run_number }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/api:latest
+            ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/api:${{ github.run_number }}
 
       - name: Build & push Web
         uses: docker/build-push-action@v6
@@ -66,8 +73,8 @@ jobs:
           file: Dockerfile
           push: true
           tags: |
-            ghcr.io/${{ github.repository_owner }}/web:latest
-            ghcr.io/${{ github.repository_owner }}/web:${{ github.run_number }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/web:latest
+            ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/web:${{ github.run_number }}
 
   deploy:
     name: Deploy API + Web
@@ -101,9 +108,18 @@ jobs:
           until [ $retries -le 0 ]; do
             echo "Deploying ${{ matrix.service }} from $SERVICE_PATH..."
             cd $SERVICE_PATH
-            railway up --ci --service $SERVICE_ID . && break
+            if railway up --ci --service $SERVICE_ID .; then
+              echo "Deployment succeeded!"
+              cd ../..
+              break
+            fi
             retries=$((retries-1))
             echo "Retrying deploy for ${{ matrix.service }}... ($retries left)"
             sleep 10
             cd ../..
           done
+
+          if [ $retries -le 0 ]; then
+            echo "Deployment failed after multiple attempts!"
+            exit 1
+          fi
