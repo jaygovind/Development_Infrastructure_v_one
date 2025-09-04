@@ -32,7 +32,7 @@ jobs:
         with:
           context: .                   # 👈 root repo context
           file: Dockerfile             # 👈 root Dockerfile
-          target: api                  # 👈 optional: agar multi-stage me API stage define hai
+          #target: api                  # 👈 optional: agar multi-stage me API stage define hai
           push: true
           no-cache: true
           tags: |
@@ -44,7 +44,7 @@ jobs:
         with:
           context: .                   # 👈 root repo context
           file: Dockerfile             # 👈 root Dockerfile
-          target: web                  # 👈 optional: agar multi-stage me Web stage define hai
+          #target: web                  # 👈 optional: agar multi-stage me Web stage define hai
           push: true
           no-cache: true
           tags: |
