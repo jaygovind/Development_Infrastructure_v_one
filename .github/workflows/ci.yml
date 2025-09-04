@@ -8,7 +8,8 @@ on:
 
 env:
   CI: "true"
-  NX_DISABLE_CLOUD: "true"        # Nx Cloud disabled for CI
+  NX_CLOUD_ACCESS_TOKEN: ""    # Nx Cloud token blank → completely disabled
+  NX_DISABLE_CLOUD: "true"     # Nx Cloud disabled
   REGISTRY: ghcr.io
   IMAGE_OWNER: ${{ github.repository_owner }}
 
