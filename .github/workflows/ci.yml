@@ -1,71 +1,121 @@
-name: CI
+name: Nx CI + CD (Railway Docker Ready)
 
 on:
   push:
     branches:
       - main
   pull_request:
-    branches:
-      - main
+
+env:
+  CI: "true"
+  NX_CLOUD_ACCESS_TOKEN: ${{ secrets.NX_CLOUD_ACCESS_TOKEN }}
+  NX_DISABLE_CLOUD: ${{ secrets.NX_CLOUD_ACCESS_TOKEN == '' && 'true' || 'false' }}
+  REGISTRY: ghcr.io
+  IMAGE_OWNER: ${{ github.repository_owner }}
 
 jobs:
-  ci:
+  verify:
+    name: Lint • Test • Build
     runs-on: ubuntu-latest
-
-    env:
-      NODE_ENV: production
-
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Setup Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: 'npm'
 
       - name: Install dependencies
-        run: npm ci
+        run: npm install
 
-      - name: Run Lint
-        run: npx nx lint
+      - name: Nx Affected - Lint
+        run: npx nx affected --target=lint --parallel=3
 
-      - name: Run Tests
-        run: npx nx test --ci --code-coverage
+      - name: Nx Affected - Test
+        run: npx nx affected --target=test --parallel=3
 
-      - name: Build Apps
-        run: npx nx build api && npx nx build web
+      - name: Nx Affected - Build
+        run: npx nx affected --target=build --parallel=3
 
-      - name: Install Railway CLI
-        run: curl -sSL https://railway.app/install.sh | sh
+  docker:
+    name: Build & Push Docker images
+    needs: verify
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
 
-      - name: Deploy API to Railway
-        run: |
-          SERVICE_ID=896433a2-649c-4d47-b397-1c2e4918b4fe
-          RETRIES=3
-          until [ $RETRIES -le 0 ]; do
-            railway up --ci --service $SERVICE_ID . && break
-            echo "Retrying deploy for API... ($RETRIES left)"
-            RETRIES=$((RETRIES-1))
-            sleep 5
-          done
-          if [ $RETRIES -le 0 ]; then
-            echo "API deploy failed after retries"
-            exit 1
-          fi
+      - uses: docker/setup-buildx-action@v3
 
-      - name: Deploy Web to Railway
-        run: |
-          SERVICE_ID=651af99c-48dd-4d98-85f4-a0bc78710924
-          RETRIES=3
-          until [ $RETRIES -le 0 ]; do
-            railway up --ci --service $SERVICE_ID . && break
-            echo "Retrying deploy for Web... ($RETRIES left)"
-            RETRIES=$((RETRIES-1))
-            sleep 5
-          done
-          if [ $RETRIES -le 0 ]; then
-            echo "Web deploy failed after retries"
-            exit 1
-          fi
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build & push API
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/api:latest
+            ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/api:${{ github.run_number }}
+
+      - name: Build & push Web
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/web:latest
+            ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/web:${{ github.run_number }}
+
+      deploy:
+        name: Deploy API + Web (Root Dockerfile)
+        needs: docker
+        runs-on: ubuntu-latest
+        strategy:
+          matrix:
+            service: [api, web]
+          max-parallel: 1
+        steps:
+          - uses: actions/checkout@v4
+
+          - name: Install Railway CLI
+            run: npm install -g @railway/cli
+
+          - name: Deploy via Railway (Root Dockerfile)
+            env:
+              RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+            run: |
+              set -e
+              retries=3
+
+              if [ "${{ matrix.service }}" == "api" ]; then
+                SERVICE_ID=896433a2-649c-4d47-b397-1c2e4918b4fe
+              else
+                SERVICE_ID=651af99c-48dd-4d98-85f4-a0bc78710924
+              fi
+
+              until [ $retries -le 0 ]; do
+                echo "Deploying ${{ matrix.service }} from root Dockerfile..."
+                if railway up --ci --service $SERVICE_ID .; then
+                  echo "Deployment succeeded!"
+                  break
+                fi
+                retries=$((retries-1))
+                echo "Retrying deploy for ${{ matrix.service }}... ($retries left)"
+                sleep 10
+              done
+
+              if [ $retries -le 0 ]; then
+                echo "Deployment failed after multiple attempts!"
+                exit 1
+              fi
+
