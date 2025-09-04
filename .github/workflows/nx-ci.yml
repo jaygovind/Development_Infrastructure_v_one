@@ -13,7 +13,6 @@ permissions:
   actions: read
   contents: read
 
-# Shared ENV
 env:
   CI: "true"
   NX_CLOUD_ACCESS_TOKEN: ${{ secrets.NX_CLOUD_ACCESS_TOKEN }}
@@ -77,8 +76,8 @@ jobs:
         id: push-api
         uses: docker/build-push-action@v6
         with:
-          context: .                  # root context
-          file: Dockerfile            # root Dockerfile
+          context: .
+          file: Dockerfile
           push: true
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/api:latest
@@ -88,8 +87,8 @@ jobs:
         id: push-web
         uses: docker/build-push-action@v6
         with:
-          context: .                  # root context
-          file: Dockerfile            # root Dockerfile
+          context: .
+          file: Dockerfile
           push: true
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/web:latest
@@ -109,7 +108,7 @@ jobs:
       - name: Install Railway CLI
         run: npm install -g @railway/cli
 
-      - name: Deploy via Railway
+      - name: Deploy via Railway using pre-built image
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
         run: |
@@ -117,16 +116,15 @@ jobs:
           retries=3
           if [ "${{ matrix.service }}" == "api" ]; then
             SERVICE_ID=896433a2-649c-4d47-b397-1c2e4918b4fe
-            DOCKERFILE=Dockerfile
+            IMAGE_TAG=${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/api:latest
           else
             SERVICE_ID=651af99c-48dd-4d98-85f4-a0bc78710924
-            DOCKERFILE=Dockerfile
+            IMAGE_TAG=${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/web:latest
           fi
 
           until [ $retries -le 0 ]; do
             echo "Deploying ${{ matrix.service }}..."
-            # 👇 Railway CLI new syntax for Dockerfile
-            railway up --ci --service $SERVICE_ID . -- --dockerfile $DOCKERFILE && break
+            railway up --ci --service $SERVICE_ID --image $IMAGE_TAG && break
             retries=$((retries-1))
             echo "Retrying deploy for ${{ matrix.service }}... ($retries left)"
             sleep 10
