@@ -91,7 +91,7 @@ jobs:
 
           until [ $retries -le 0 ]; do
             echo "Deploying ${{ matrix.service }}..."
-            railway up --ci --service $SERVICE_ID --image $IMAGE_TAG && break
+            railway up --ci --service $SERVICE_ID . -- --image $IMAGE_TAG && break
             retries=$((retries-1))
             echo "Retrying deploy for ${{ matrix.service }}... ($retries left)"
             sleep 10
