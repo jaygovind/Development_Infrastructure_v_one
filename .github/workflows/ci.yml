@@ -1,4 +1,4 @@
-name: CI + CD (Railway Docker Ready - Root Dockerfile)
+name: CI + CD (Railway per-app Docker)
 
 on:
   push:
@@ -8,14 +8,13 @@ on:
 
 env:
   CI: "true"
-  NX_CLOUD_ACCESS_TOKEN: ""
   NX_DISABLE_CLOUD: "true"
   REGISTRY: ghcr.io
   IMAGE_OWNER: ${{ github.repository_owner }}
 
 jobs:
   verify:
-    name: Skip Nx → Only Install
+    name: Install dependencies
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -28,18 +27,12 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      # Nx temporarily skipped
-      #- name: Nx Affected - Lint
-      #  run: npx nx affected --target=lint --parallel=3 --nx-cloud=false
-      #
-      #- name: Nx Affected - Test
-      #  run: npx nx affected --target=test --parallel=3 --nx-cloud=false
-      #
-      #- name: Nx Affected - Build
+      # Nx skipped temporarily
+      #- name: Nx affected build/test/lint
       #  run: npx nx affected --target=build --parallel=3 --nx-cloud=false
 
   docker:
-    name: Build & Push Docker images (Optional, for GHCR)
+    name: Build & Push Docker images (Optional)
     needs: verify
     runs-on: ubuntu-latest
     permissions:
@@ -47,9 +40,7 @@ jobs:
       packages: write
     steps:
       - uses: actions/checkout@v4
-
       - uses: docker/setup-buildx-action@v3
-
       - name: Login to GHCR
         uses: docker/login-action@v3
         with:
@@ -57,15 +48,25 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build & push Docker (root Dockerfile)
+      - name: Build & push API
         uses: docker/build-push-action@v6
         with:
-          context: .
+          context: apps/api
           file: Dockerfile
           push: true
           tags: |
-            ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/project:latest
-            ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/project:${{ github.run_number }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/api:latest
+            ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/api:${{ github.run_number }}
+
+      - name: Build & push Web
+        uses: docker/build-push-action@v6
+        with:
+          context: apps/web
+          file: Dockerfile
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/web:latest
+            ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/web:${{ github.run_number }}
 
   deploy:
     name: Deploy API + Web via Railway
@@ -89,14 +90,16 @@ jobs:
           retries=3
 
           if [ "${{ matrix.service }}" == "api" ]; then
+            cd apps/api
             SERVICE_ID=896433a2-649c-4d47-b397-1c2e4918b4fe
           else
+            cd apps/web
             SERVICE_ID=651af99c-48dd-4d98-85f4-a0bc78710924
           fi
 
           until [ $retries -le 0 ]; do
-            echo "Deploying ${{ matrix.service }} from root Dockerfile..."
-            if railway up --ci --service $SERVICE_ID .; then
+            echo "Deploying ${{ matrix.service }} from folder $(pwd)..."
+            if railway up --ci --service $SERVICE_ID; then
               echo "Deployment succeeded!"
               break
             fi
