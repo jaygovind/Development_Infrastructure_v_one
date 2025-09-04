@@ -1,6 +1,8 @@
 {
   "build": {
-    "dockerfile": "Dockerfile.web",
-    "context": "."
+    "dockerfilePath": "./Dockerfile.web"
+  },
+  "start": {
+    "cmd": "npm run start"
   }
 }

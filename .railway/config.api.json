@@ -1,6 +1,8 @@
 {
   "build": {
-    "dockerfile": "Dockerfile.api",
-    "context": "."
+    "dockerfilePath": "./Dockerfile.api"
+  },
+  "start": {
+    "cmd": "npm run start"
   }
 }
