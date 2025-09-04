@@ -1,4 +1,4 @@
-name: Nx CI + CD (Railway Docker Ready)
+name: Nx CI + CD (Railway Docker Ready - Option 2)
 
 on:
   push:
@@ -59,8 +59,8 @@ jobs:
       - name: Build & push API
         uses: docker/build-push-action@v6
         with:
-          context: .
-          file: Dockerfile
+          context: apps/api
+          file: apps/api/Dockerfile
           push: true
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/api:latest
@@ -69,15 +69,15 @@ jobs:
       - name: Build & push Web
         uses: docker/build-push-action@v6
         with:
-          context: .
-          file: Dockerfile
+          context: apps/web
+          file: apps/web/Dockerfile
           push: true
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/web:latest
             ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/web:${{ github.run_number }}
 
   deploy:
-    name: Deploy API + Web (Root Dockerfile multi-stage)
+    name: Deploy API + Web
     needs: docker
     runs-on: ubuntu-latest
     strategy:
@@ -97,28 +97,29 @@ jobs:
           set -e
           retries=3
 
-          # Pick correct SERVICE_ID and build target
           if [ "${{ matrix.service }}" == "api" ]; then
+            SERVICE_PATH=apps/api
             SERVICE_ID=896433a2-649c-4d47-b397-1c2e4918b4fe
-            BUILD_TARGET=api
           else
+            SERVICE_PATH=apps/web
             SERVICE_ID=651af99c-48dd-4d98-85f4-a0bc78710924
-            BUILD_TARGET=web
           fi
 
           until [ $retries -le 0 ]; do
-            echo "Deploying ${{ matrix.service }} using build-target $BUILD_TARGET..."
-            if railway up --ci --service $SERVICE_ID --dockerfile Dockerfile --build-target $BUILD_TARGET .; then
+            echo "Deploying ${{ matrix.service }} from $SERVICE_PATH..."
+            cd $SERVICE_PATH
+            if railway up --ci --service $SERVICE_ID .; then
               echo "Deployment succeeded!"
+              cd ../..
               break
             fi
             retries=$((retries-1))
             echo "Retrying deploy for ${{ matrix.service }}... ($retries left)"
             sleep 10
+            cd ../..
           done
 
           if [ $retries -le 0 ]; then
             echo "Deployment failed after multiple attempts!"
             exit 1
           fi
-    
