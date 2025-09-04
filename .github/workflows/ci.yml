@@ -92,14 +92,16 @@ jobs:
 
           if [ "${{ matrix.service }}" == "api" ]; then
             SERVICE_PATH=apps/api
+            SERVICE_ID=896433a2-649c-4d47-b397-1c2e4918b4fe
           else
             SERVICE_PATH=apps/web
+            SERVICE_ID=651af99c-48dd-4d98-85f4-a0bc78710924
           fi
 
           until [ $retries -le 0 ]; do
             echo "Deploying ${{ matrix.service }} from $SERVICE_PATH..."
             cd $SERVICE_PATH
-            railway up --ci . && break
+            railway up --ci --service $SERVICE_ID . && break
             retries=$((retries-1))
             echo "Retrying deploy for ${{ matrix.service }}... ($retries left)"
             sleep 10
