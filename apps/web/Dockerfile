@@ -2,19 +2,21 @@
 FROM node:20-alpine AS build
 WORKDIR /app
 
-# Copy Web manifest
+# Copy root + Web manifests
 COPY package.json package-lock.json ./
 COPY apps/web/package.json apps/web/package.json
+
+# Install dependencies
 RUN npm ci --include=dev
 
 # Copy full repo
 COPY . .
 
-# Build web workspace
+# Build Web workspace
 RUN npm run --workspace apps/web build
 
 # ---------- Runtime ----------
-FROM node:20-alpine
+FROM node:20-alpine AS runtime
 WORKDIR /app/apps/web
 
 # Copy Next.js build artifacts

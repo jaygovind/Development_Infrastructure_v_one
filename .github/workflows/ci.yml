@@ -1,46 +1,26 @@
-name: CI + CD (Railway per-app Docker)
+name: CI/CD Pipeline (Railway)
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
   pull_request:
 
 env:
-  CI: "true"
-  NX_DISABLE_CLOUD: "true"
   REGISTRY: ghcr.io
   IMAGE_OWNER: ${{ github.repository_owner }}
 
 jobs:
-  verify:
-    name: Install dependencies
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-
-      - name: Install dependencies
-        run: npm install
-
-      # Nx skipped temporarily
-      #- name: Nx affected build/test/lint
-      #  run: npx nx affected --target=build --parallel=3 --nx-cloud=false
-
   docker:
-    name: Build & Push Docker images (Optional)
-    needs: verify
+    name: Build & Push Docker Images
     runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
     steps:
       - uses: actions/checkout@v4
+
       - uses: docker/setup-buildx-action@v3
+
       - name: Login to GHCR
         uses: docker/login-action@v3
         with:
@@ -48,28 +28,28 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build & push API
+      - name: Build & Push API
         uses: docker/build-push-action@v6
         with:
-          context: apps/api
-          file: Dockerfile
+          context: .
+          file: apps/api/Dockerfile
           push: true
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/api:latest
             ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/api:${{ github.run_number }}
 
-      - name: Build & push Web
+      - name: Build & Push Web
         uses: docker/build-push-action@v6
         with:
-          context: apps/web
-          file: Dockerfile
+          context: .
+          file: apps/web/Dockerfile
           push: true
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/web:latest
             ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/web:${{ github.run_number }}
 
   deploy:
-    name: Deploy API + Web via Railway
+    name: Deploy API + Web to Railway
     needs: docker
     runs-on: ubuntu-latest
     strategy:
@@ -90,22 +70,25 @@ jobs:
           retries=3
 
           if [ "${{ matrix.service }}" == "api" ]; then
-            cd apps/api
+            SERVICE_PATH=apps/api
             SERVICE_ID=896433a2-649c-4d47-b397-1c2e4918b4fe
           else
-            cd apps/web
+            SERVICE_PATH=apps/web
             SERVICE_ID=651af99c-48dd-4d98-85f4-a0bc78710924
           fi
 
           until [ $retries -le 0 ]; do
-            echo "Deploying ${{ matrix.service }} from folder $(pwd)..."
-            if railway up --ci --service $SERVICE_ID; then
+            echo "Deploying ${{ matrix.service }} from $SERVICE_PATH..."
+            cd $SERVICE_PATH
+            if railway up --ci --service $SERVICE_ID .; then
               echo "Deployment succeeded!"
+              cd ../..
               break
             fi
             retries=$((retries-1))
             echo "Retrying deploy for ${{ matrix.service }}... ($retries left)"
             sleep 10
+            cd ../..
           done
 
           if [ $retries -le 0 ]; then
