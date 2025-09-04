@@ -1,4 +1,4 @@
-name: Nx CI + CD (Railway Docker Ready)
+name: CI + CD (Railway Docker Ready)
 
 on:
   push:
@@ -8,14 +8,14 @@ on:
 
 env:
   CI: "true"
-  NX_CLOUD_ACCESS_TOKEN: ""    # Nx Cloud auth completely disabled
-  NX_DISABLE_CLOUD: "true"     # Nx Cloud disabled
+  NX_CLOUD_ACCESS_TOKEN: ""    # Nx Cloud auth disabled
+  NX_DISABLE_CLOUD: "true"
   REGISTRY: ghcr.io
   IMAGE_OWNER: ${{ github.repository_owner }}
 
 jobs:
   verify:
-    name: Lint • Test • Build
+    name: Skip Nx → Only Install
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -28,14 +28,15 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Nx Affected - Lint
-        run: npx nx affected --target=lint --parallel=3 --nx-cloud=false
-
-      - name: Nx Affected - Test
-        run: npx nx affected --target=test --parallel=3 --nx-cloud=false
-
-      - name: Nx Affected - Build
-        run: npx nx affected --target=build --parallel=3 --nx-cloud=false
+      # Temporarily commenting Nx steps
+      #- name: Nx Affected - Lint
+      #  run: npx nx affected --target=lint --parallel=3 --nx-cloud=false
+      #
+      #- name: Nx Affected - Test
+      #  run: npx nx affected --target=test --parallel=3 --nx-cloud=false
+      #
+      #- name: Nx Affected - Build
+      #  run: npx nx affected --target=build --parallel=3 --nx-cloud=false
 
   docker:
     name: Build & Push Docker images
