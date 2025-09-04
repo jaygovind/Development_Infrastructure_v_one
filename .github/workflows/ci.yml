@@ -1,4 +1,4 @@
-name: CI + CD (Railway Docker Ready)
+name: CI + CD (Railway Docker Ready - Root Dockerfile)
 
 on:
   push:
@@ -8,8 +8,8 @@ on:
 
 env:
   CI: "true"
-  NX_CLOUD_ACCESS_TOKEN: ""    # Nx Cloud auth disabled
-  NX_DISABLE_CLOUD: "true"     # Nx Cloud disabled
+  NX_CLOUD_ACCESS_TOKEN: ""
+  NX_DISABLE_CLOUD: "true"
   REGISTRY: ghcr.io
   IMAGE_OWNER: ${{ github.repository_owner }}
 
@@ -39,7 +39,7 @@ jobs:
       #  run: npx nx affected --target=build --parallel=3 --nx-cloud=false
 
   docker:
-    name: Build & Push Docker images
+    name: Build & Push Docker images (Optional, for GHCR)
     needs: verify
     runs-on: ubuntu-latest
     permissions:
@@ -57,28 +57,18 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build & push API
+      - name: Build & push Docker (root Dockerfile)
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: apps/api/Dockerfile
+          file: Dockerfile
           push: true
           tags: |
-            ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/api:latest
-            ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/api:${{ github.run_number }}
-
-      - name: Build & push Web
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: apps/web/Dockerfile
-          push: true
-          tags: |
-            ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/web:latest
-            ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/web:${{ github.run_number }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/project:latest
+            ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/project:${{ github.run_number }}
 
   deploy:
-    name: Deploy API + Web
+    name: Deploy API + Web via Railway
     needs: docker
     runs-on: ubuntu-latest
     strategy:
@@ -99,17 +89,14 @@ jobs:
           retries=3
 
           if [ "${{ matrix.service }}" == "api" ]; then
-            IMAGE=${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/api:latest
             SERVICE_ID=896433a2-649c-4d47-b397-1c2e4918b4fe
           else
-            IMAGE=${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/web:latest
             SERVICE_ID=651af99c-48dd-4d98-85f4-a0bc78710924
           fi
 
           until [ $retries -le 0 ]; do
-            echo "Deploying ${{ matrix.service }} using image $IMAGE..."
-            # proper -- syntax for Railway CLI
-            if railway up --ci --service $SERVICE_ID -- --image $IMAGE; then
+            echo "Deploying ${{ matrix.service }} from root Dockerfile..."
+            if railway up --ci --service $SERVICE_ID .; then
               echo "Deployment succeeded!"
               break
             fi
