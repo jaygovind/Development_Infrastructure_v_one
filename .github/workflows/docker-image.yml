@@ -30,8 +30,8 @@ jobs:
       - name: Build & push API
         uses: docker/build-push-action@v6
         with:
-          context: .          # 👈 context app folder
-          file: apps/api/Dockerfile   # or: file: Dockerfile
+          context: .                        # 👈 root repo context (Railway jaisa)
+          file: .railway/dockerfile.api     # 👈 API Dockerfile
           push: true
           no-cache: true 
           tags: |
@@ -41,8 +41,8 @@ jobs:
       - name: Build & push Web
         uses: docker/build-push-action@v6
         with:
-          context: .           # 👈 build context = app folder
-          file: apps/web/Dockerfile    # 👈 or just "Dockerfile" if it lives there
+          context: .                        # 👈 root repo context
+          file: .railway/dockerfile.web     # 👈 Web Dockerfile
           push: true
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/web:latest

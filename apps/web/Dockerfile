@@ -2,33 +2,31 @@
 FROM node:20-alpine AS build
 WORKDIR /app
 
-# Install dependencies using root lockfile (workspace-aware)
+# Root deps
 COPY package.json package-lock.json ./
 COPY apps/web/package.json apps/web/package.json
 RUN npm ci --include=dev
 
-# Copy the whole repo (so Next.js can resolve workspaces & imports)
+# Copy full repo
 COPY . .
 
-# Make sure public exists (avoids COPY errors later)
-RUN mkdir -p apps/web/public
-
 # Build ONLY web workspace
-RUN npm --workspace apps/web run build
+RUN npm run --workspace apps/web build
 
 
 # ---------- Runtime ----------
 FROM node:20-alpine AS runtime
-WORKDIR /app
+WORKDIR /app/apps/web
 
-# Use smaller image: copy only what's needed
+# Copy Next.js build artifacts
 COPY --from=build /app/apps/web/.next ./.next
 COPY --from=build /app/apps/web/public ./public
 COPY --from=build /app/apps/web/package*.json ./
-COPY --from=build /app/node_modules ./node_modules
+
+# Copy node_modules
+COPY --from=build /app/node_modules /app/node_modules
 
 ENV NODE_ENV=production
 EXPOSE 3000
 
-# Start Next.js
-CMD ["npm", "run", "start", "--workspace=apps/web"]
+CMD ["npm", "--workspace=apps/web", "start"]
