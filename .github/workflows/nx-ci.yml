@@ -13,7 +13,7 @@ permissions:
   actions: read
   contents: read
 
-# Shared ENV (available to all jobs)
+# Shared ENV
 env:
   CI: "true"
   NX_CLOUD_ACCESS_TOKEN: ${{ secrets.NX_CLOUD_ACCESS_TOKEN }}
@@ -25,7 +25,6 @@ jobs:
   verify:
     name: Nx • Lint • Test • Build (affected)
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v4
         with:
@@ -59,7 +58,6 @@ jobs:
     outputs:
       api-digest: ${{ steps.push-api.outputs.digest }}
       web-digest: ${{ steps.push-web.outputs.digest }}
-
     steps:
       - uses: actions/checkout@v4
         with:
@@ -79,9 +77,8 @@ jobs:
         id: push-api
         uses: docker/build-push-action@v6
         with:
-          context: .                  # 👈 root context
-          file: Dockerfile            # 👈 root Dockerfile
-          target: api                 # 👈 optional: if multi-stage Dockerfile has API stage
+          context: .                  # root context
+          file: Dockerfile            # root Dockerfile
           push: true
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/api:latest
@@ -91,24 +88,57 @@ jobs:
         id: push-web
         uses: docker/build-push-action@v6
         with:
-          context: .                  # 👈 root context
-          file: Dockerfile            # 👈 root Dockerfile
-          target: web                 # 👈 optional: if multi-stage Dockerfile has Web stage
+          context: .                  # root context
+          file: Dockerfile            # root Dockerfile
           push: true
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/web:latest
             ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/web:${{ github.run_number }}
 
+  deploy:
+    name: Deploy API + Web
+    needs: docker
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service: [api, web]
+      max-parallel: 1
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Railway CLI
+        run: npm install -g @railway/cli
+
+      - name: Deploy via Railway
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: |
+          set -e
+          retries=3
+          if [ "${{ matrix.service }}" == "api" ]; then
+            SERVICE_ID=896433a2-649c-4d47-b397-1c2e4918b4fe
+            DOCKERFILE=Dockerfile
+          else
+            SERVICE_ID=651af99c-48dd-4d98-85f4-a0bc78710924
+            DOCKERFILE=Dockerfile
+          fi
+
+          until [ $retries -le 0 ]; do
+            echo "Deploying ${{ matrix.service }}..."
+            # 👇 Railway CLI new syntax for Dockerfile
+            railway up --ci --service $SERVICE_ID . -- --dockerfile $DOCKERFILE && break
+            retries=$((retries-1))
+            echo "Retrying deploy for ${{ matrix.service }}... ($retries left)"
+            sleep 10
+          done
+
   release-info:
     name: Release Info
-    needs: docker
-    if: needs.docker.result == 'success'
+    needs: deploy
+    if: needs.deploy.result == 'success'
     runs-on: ubuntu-latest
     steps:
       - name: Print image digests
         run: |
           echo "API digest: ${{ needs.docker.outputs.api-digest }}"
           echo "Web digest: ${{ needs.docker.outputs.web-digest }}"
-      # Example: trigger deploy using the image refs above
-      # - name: Deploy to Railway
-      #   run: railway up --service api --image ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/api:latest
