@@ -9,7 +9,7 @@ on:
 env:
   CI: "true"
   NX_CLOUD_ACCESS_TOKEN: ""    # Nx Cloud auth disabled
-  NX_DISABLE_CLOUD: "true"
+  NX_DISABLE_CLOUD: "true"     # Nx Cloud disabled
   REGISTRY: ghcr.io
   IMAGE_OWNER: ${{ github.repository_owner }}
 
@@ -28,7 +28,7 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      # Temporarily commenting Nx steps
+      # Nx temporarily skipped
       #- name: Nx Affected - Lint
       #  run: npx nx affected --target=lint --parallel=3 --nx-cloud=false
       #
@@ -108,7 +108,8 @@ jobs:
 
           until [ $retries -le 0 ]; do
             echo "Deploying ${{ matrix.service }} using image $IMAGE..."
-            if railway up --ci --service $SERVICE_ID --image $IMAGE; then
+            # proper -- syntax for Railway CLI
+            if railway up --ci --service $SERVICE_ID -- --image $IMAGE; then
               echo "Deployment succeeded!"
               break
             fi
