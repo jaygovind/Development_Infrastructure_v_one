@@ -26,16 +26,17 @@ jobs:
       - name: Install Railway CLI
         run: |
           curl -fsSL https://raw.githubusercontent.com/railwayapp/cli/master/install.sh | sh
-          railway whoami
+          railway --version
+
+      - name: Login to Railway
+        run: railway login --apiKey $RAILWAY_API_KEY
 
       # ---------------- API Deploy ----------------
       - name: Deploy API
         working-directory: apps/api
-        run: |
-          railway up --ci --service $API_SERVICE_ID
+        run: railway up --ci --service $API_SERVICE_ID
 
       # ---------------- Web Deploy ----------------
       - name: Deploy Web
         working-directory: apps/web
-        run: |
-          railway up --ci --service $WEB_SERVICE_ID
+        run: railway up --ci --service $WEB_SERVICE_ID
