@@ -27,43 +27,26 @@ RUN npm --workspace apps/web run build
 FROM node:20-alpine
 WORKDIR /app
 
-# Install pm2 to run multiple processes
+RUN apk add --no-cache libc6-compat openssl
 RUN npm install -g pm2
 
-# Copy node_modules + apps
+# Copy dependencies
 COPY --from=build-api /app/node_modules ./node_modules
+
+# Copy API
 COPY --from=build-api /app/apps/api ./apps/api
+
+# Copy Web build
 COPY --from=build-web /app/apps/web/.next ./apps/web/.next
 COPY --from=build-web /app/apps/web/public ./apps/web/public
 COPY --from=build-web /app/apps/web/package*.json ./apps/web/
-COPY --from=build-api /app/apps/api/package*.json ./apps/api/
 
-# Env
+# Copy ecosystem file
+COPY ecosystem.config.js ./ecosystem.config.js
+
 ENV NODE_ENV=production
 ENV API_PORT=4000
 ENV WEB_PORT=3000
 EXPOSE 4000 3000
-
-# PM2 ecosystem to run both
-COPY <<EOF ./ecosystem.config.js
-module.exports = {
-  apps: [
-    {
-      name: "api",
-      cwd: "./apps/api",
-      script: "npm",
-      args: "start",
-      env: { PORT: 4000 }
-    },
-    {
-      name: "web",
-      cwd: "./apps/web",
-      script: "npm",
-      args: "start",
-      env: { PORT: 3000 }
-    }
-  ]
-}
-EOF
 
 CMD ["pm2-runtime", "ecosystem.config.js"]

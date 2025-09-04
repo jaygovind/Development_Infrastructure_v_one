@@ -1,15 +1,17 @@
+version: "3.9"
+
 services:
   db:
     image: postgres:16
-    container_name: app_db
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-app}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-app}
-      POSTGRES_DB: ${POSTGRES_DB:-appdb}
+      POSTGRES_DB: ${POSTGRES_DB:-app}
     volumes:
       - pg_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
     ports:
-      - "5433:5432"  # host 5433 -> container 5432
+      - "5434:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-app}"]
       interval: 5s
@@ -19,7 +21,6 @@ services:
 
   pgadmin:
     image: dpage/pgadmin4:8
-    container_name: app_pgadmin
     environment:
       PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-admin@example.com}
       PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-admin}
@@ -30,13 +31,9 @@ services:
     depends_on:
       - db
     restart: unless-stopped
-    # (optional persistence)
-    # volumes:
-    #   - pgadmin_data:/var/lib/pgadmin
 
   minio:
     image: minio/minio:latest
-    container_name: app_minio
     command: server /data --console-address ":9001"
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
@@ -44,21 +41,19 @@ services:
     volumes:
       - minio_data:/data
     ports:
-      - "${MINIO_API_PORT:-9002}:9000"     # API
-      - "${MINIO_CONSOLE_PORT:-9011}:9001" # Console
+      - "${MINIO_API_PORT:-9002}:9000"
+      - "${MINIO_CONSOLE_PORT:-9011}:9001"
     restart: unless-stopped
 
-  # App layer ko jab chahiye tab chalao:
-  api:
-    profiles: ["app"]
+  monolith:
     build:
       context: .
-      dockerfile: apps/api/Dockerfile
-    container_name: app_api
+      dockerfile: Dockerfile
     environment:
       NODE_ENV: production
-      PORT: 4000
-      DATABASE_URL: postgres://${POSTGRES_USER:-app}:${POSTGRES_PASSWORD:-app}@db:5432/${POSTGRES_DB:-appdb}
+      API_PORT: 4000
+      WEB_PORT: 3000
+      DATABASE_URL: postgres://${POSTGRES_USER:-app}:${POSTGRES_PASSWORD:-app}@db:5432/${POSTGRES_DB:-app}
       JWT_SECRET: ${JWT_SECRET:-dev_secret}
       MINIO_ENDPOINT: minio
       MINIO_PORT: 9000
@@ -72,24 +67,9 @@ services:
         condition: service_started
     ports:
       - "4000:4000"
-    restart: unless-stopped
-
-  web:
-    profiles: ["app"]
-    build:
-      context: .
-      dockerfile: apps/web/Dockerfile
-    container_name: app_web
-    environment:
-      NODE_ENV: production
-      NEXT_PUBLIC_API_URL: http://api:4000
-    depends_on:
-      - api
-    ports:
       - "3000:3000"
     restart: unless-stopped
 
 volumes:
   pg_data:
   minio_data:
-  # pgadmin_data:

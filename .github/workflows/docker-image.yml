@@ -30,10 +30,11 @@ jobs:
       - name: Build & push API
         uses: docker/build-push-action@v6
         with:
-          context: .                        # 👈 root repo context (Railway jaisa)
-          file: .railway/dockerfile.api     # 👈 API Dockerfile
+          context: .                   # 👈 root repo context
+          file: Dockerfile             # 👈 root Dockerfile
+          target: api                  # 👈 optional: agar multi-stage me API stage define hai
           push: true
-          no-cache: true 
+          no-cache: true
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/api:latest
             ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/api:${{ github.run_number }}
@@ -41,9 +42,11 @@ jobs:
       - name: Build & push Web
         uses: docker/build-push-action@v6
         with:
-          context: .                        # 👈 root repo context
-          file: .railway/dockerfile.web     # 👈 Web Dockerfile
+          context: .                   # 👈 root repo context
+          file: Dockerfile             # 👈 root Dockerfile
+          target: web                  # 👈 optional: agar multi-stage me Web stage define hai
           push: true
+          no-cache: true
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/web:latest
             ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/web:${{ github.run_number }}

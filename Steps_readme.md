@@ -27,13 +27,18 @@ npm run prisma:studio
 
   # for docker  Local test for api before pushing:
   <!-- docker build -f apps/api/Dockerfile -t api-test . -->
-  docker build -f .railway/Dockerfile.api -t api-test .
-  docker run --rm -p 4000:4000 api-test
+  <!-- docker build -f .railway/Dockerfile.api -t api-test . -->
+<!-- 
+  docker run --rm -p 4000:4000 api-test -->
+
+  docker build -t monolith-test .
+  docker run -p 4000:4000 -p 3000:3000 monolith-test
 
    # for docker  Local test for api before pushing:
   docker builder prune -af
 <!-- docker build --no-cache -t web-test -f apps/web/Dockerfile . -->
-docker build -f .railway/Dockerfile.web -t web-test .
-
-docker run --rm -p 3000:3000 web-tes
+<!-- docker build -f .railway/Dockerfile.web -t web-test .
+docker run --rm -p 3000:3000 web-tes -->
+  docker build -t monolith-test .
+  docker run -p 4000:4000 -p 3000:3000 monolith-test
 

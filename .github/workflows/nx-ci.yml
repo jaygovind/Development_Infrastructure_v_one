@@ -31,8 +31,8 @@ jobs:
         with:
           filter: tree:0
           fetch-depth: 0
-      # Uncomment if you’ve run `nx connect` and want task distribution
-       run: npx nx start-ci-run --distribute-on="3 linux-medium-js" --stop-agents-after="build"
+
+      - run: npx nx start-ci-run --distribute-on="3 linux-medium-js" --stop-agents-after="build"
 
       - uses: actions/setup-node@v4
         with:
@@ -43,10 +43,8 @@ jobs:
 
       - uses: nrwl/nx-set-shas@v4
 
-      # Record logs to Nx Cloud (optional) by prefixing with `nx-cloud record --`
       - run: npx nx affected -t lint test build
 
-      # Self-healing CI suggestions (non-blocking)
       - run: npx nx fix-ci
         if: always()
 
@@ -81,8 +79,9 @@ jobs:
         id: push-api
         uses: docker/build-push-action@v6
         with:
-          context: .
-          file: apps/api/Dockerfile
+          context: .                  # 👈 root context
+          file: Dockerfile            # 👈 root Dockerfile
+          target: api                 # 👈 optional: if multi-stage Dockerfile has API stage
           push: true
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/api:latest
@@ -92,8 +91,9 @@ jobs:
         id: push-web
         uses: docker/build-push-action@v6
         with:
-          context: .
-          file: apps/web/Dockerfile
+          context: .                  # 👈 root context
+          file: Dockerfile            # 👈 root Dockerfile
+          target: web                 # 👈 optional: if multi-stage Dockerfile has Web stage
           push: true
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/web:latest
