@@ -23,14 +23,14 @@ jobs:
         with:
           node-version: 20
 
-      - name: Install Railway CLI v3.14.0
+      - name: Install Railway CLI
         run: |
-          curl -fsSL https://github.com/railwayapp/cli/releases/download/v3.14.0/railway_3.14.0_linux_amd64.tar.gz | tar xz
-          sudo mv railway /usr/local/bin/
+          curl -fsSL https://railway.app/cli | bash
           railway --version
 
       - name: Login to Railway
-        run: echo $RAILWAY_API_KEY | railway login
+        run: |
+          echo $RAILWAY_API_KEY | railway login
 
       # ---------------- API Deploy ----------------
       - name: Deploy API
