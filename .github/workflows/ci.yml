@@ -77,7 +77,7 @@ jobs:
             ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/web:${{ github.run_number }}
 
   deploy:
-    name: Deploy API + Web (Root Dockerfile)
+    name: Deploy API + Web (Root Dockerfile multi-stage)
     needs: docker
     runs-on: ubuntu-latest
     strategy:
@@ -90,22 +90,25 @@ jobs:
       - name: Install Railway CLI
         run: npm install -g @railway/cli
 
-      - name: Deploy via Railway (Root Dockerfile)
+      - name: Deploy via Railway
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
         run: |
           set -e
           retries=3
 
+          # Pick correct SERVICE_ID and build target
           if [ "${{ matrix.service }}" == "api" ]; then
             SERVICE_ID=896433a2-649c-4d47-b397-1c2e4918b4fe
+            BUILD_TARGET=api
           else
             SERVICE_ID=651af99c-48dd-4d98-85f4-a0bc78710924
+            BUILD_TARGET=web
           fi
 
           until [ $retries -le 0 ]; do
-            echo "Deploying ${{ matrix.service }} from root Dockerfile..."
-            if railway up --ci --service $SERVICE_ID .; then
+            echo "Deploying ${{ matrix.service }} using build-target $BUILD_TARGET..."
+            if railway up --ci --service $SERVICE_ID --dockerfile Dockerfile --build-target $BUILD_TARGET .; then
               echo "Deployment succeeded!"
               break
             fi
@@ -118,4 +121,4 @@ jobs:
             echo "Deployment failed after multiple attempts!"
             exit 1
           fi
-
+    
