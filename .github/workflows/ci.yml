@@ -76,46 +76,46 @@ jobs:
             ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/web:latest
             ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/web:${{ github.run_number }}
 
-      deploy:
-        name: Deploy API + Web (Root Dockerfile)
-        needs: docker
-        runs-on: ubuntu-latest
-        strategy:
-          matrix:
-            service: [api, web]
-          max-parallel: 1
-        steps:
-          - uses: actions/checkout@v4
+  deploy:
+    name: Deploy API + Web (Root Dockerfile)
+    needs: docker
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service: [api, web]
+      max-parallel: 1
+    steps:
+      - uses: actions/checkout@v4
 
-          - name: Install Railway CLI
-            run: npm install -g @railway/cli
+      - name: Install Railway CLI
+        run: npm install -g @railway/cli
 
-          - name: Deploy via Railway (Root Dockerfile)
-            env:
-              RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-            run: |
-              set -e
-              retries=3
+      - name: Deploy via Railway (Root Dockerfile)
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: |
+          set -e
+          retries=3
 
-              if [ "${{ matrix.service }}" == "api" ]; then
-                SERVICE_ID=896433a2-649c-4d47-b397-1c2e4918b4fe
-              else
-                SERVICE_ID=651af99c-48dd-4d98-85f4-a0bc78710924
-              fi
+          if [ "${{ matrix.service }}" == "api" ]; then
+            SERVICE_ID=896433a2-649c-4d47-b397-1c2e4918b4fe
+          else
+            SERVICE_ID=651af99c-48dd-4d98-85f4-a0bc78710924
+          fi
 
-              until [ $retries -le 0 ]; do
-                echo "Deploying ${{ matrix.service }} from root Dockerfile..."
-                if railway up --ci --service $SERVICE_ID .; then
-                  echo "Deployment succeeded!"
-                  break
-                fi
-                retries=$((retries-1))
-                echo "Retrying deploy for ${{ matrix.service }}... ($retries left)"
-                sleep 10
-              done
+          until [ $retries -le 0 ]; do
+            echo "Deploying ${{ matrix.service }} from root Dockerfile..."
+            if railway up --ci --service $SERVICE_ID .; then
+              echo "Deployment succeeded!"
+              break
+            fi
+            retries=$((retries-1))
+            echo "Retrying deploy for ${{ matrix.service }}... ($retries left)"
+            sleep 10
+          done
 
-              if [ $retries -le 0 ]; then
-                echo "Deployment failed after multiple attempts!"
-                exit 1
-              fi
+          if [ $retries -le 0 ]; then
+            echo "Deployment failed after multiple attempts!"
+            exit 1
+          fi
 
