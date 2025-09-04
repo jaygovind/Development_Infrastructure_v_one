@@ -2,17 +2,15 @@
 FROM node:20-alpine AS build
 WORKDIR /app
 
-# Copy root + Web manifests
+# Root deps
 COPY package.json package-lock.json ./
 COPY apps/web/package.json apps/web/package.json
-
-# Install dependencies
 RUN npm ci --include=dev
 
 # Copy full repo
 COPY . .
 
-# Build Web workspace
+# Build ONLY web workspace
 RUN npm run --workspace apps/web build
 
 # ---------- Runtime ----------

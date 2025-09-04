@@ -1,4 +1,4 @@
-name: CI/CD Pipeline (Railway)
+name: CI/CD - Nx + Railway (Per-app Dockerfile)
 
 on:
   push:
@@ -6,12 +6,12 @@ on:
   pull_request:
 
 env:
-  REGISTRY: ghcr.io
-  IMAGE_OWNER: ${{ github.repository_owner }}
+  CI: "true"
+  RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
 
 jobs:
   docker:
-    name: Build & Push Docker Images
+    name: Build & Push Docker images
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -24,32 +24,32 @@ jobs:
       - name: Login to GHCR
         uses: docker/login-action@v3
         with:
-          registry: ${{ env.REGISTRY }}
+          registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build & Push API
+      - name: Build & push API
         uses: docker/build-push-action@v6
         with:
           context: .
           file: apps/api/Dockerfile
           push: true
           tags: |
-            ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/api:latest
-            ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/api:${{ github.run_number }}
+            ghcr.io/${{ github.repository_owner }}/api:latest
+            ghcr.io/${{ github.repository_owner }}/api:${{ github.run_number }}
 
-      - name: Build & Push Web
+      - name: Build & push Web
         uses: docker/build-push-action@v6
         with:
           context: .
           file: apps/web/Dockerfile
           push: true
           tags: |
-            ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/web:latest
-            ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/web:${{ github.run_number }}
+            ghcr.io/${{ github.repository_owner }}/web:latest
+            ghcr.io/${{ github.repository_owner }}/web:${{ github.run_number }}
 
   deploy:
-    name: Deploy API + Web to Railway
+    name: Deploy API + Web
     needs: docker
     runs-on: ubuntu-latest
     strategy:
@@ -70,25 +70,20 @@ jobs:
           retries=3
 
           if [ "${{ matrix.service }}" == "api" ]; then
-            SERVICE_PATH=apps/api
             SERVICE_ID=896433a2-649c-4d47-b397-1c2e4918b4fe
           else
-            SERVICE_PATH=apps/web
             SERVICE_ID=651af99c-48dd-4d98-85f4-a0bc78710924
           fi
 
           until [ $retries -le 0 ]; do
-            echo "Deploying ${{ matrix.service }} from $SERVICE_PATH..."
-            cd $SERVICE_PATH
+            echo "Deploying ${{ matrix.service }} from root context..."
             if railway up --ci --service $SERVICE_ID .; then
               echo "Deployment succeeded!"
-              cd ../..
               break
             fi
             retries=$((retries-1))
             echo "Retrying deploy for ${{ matrix.service }}... ($retries left)"
             sleep 10
-            cd ../..
           done
 
           if [ $retries -le 0 ]; then

@@ -15,10 +15,10 @@ RUN npm ci --include=dev
 # Copy full repo
 COPY . .
 
-# Generate Prisma client
+# Generate prisma client
 RUN npx prisma generate --schema apps/api/prisma/schema.prisma
 
-# Build API workspace
+# Build API only
 RUN npm run --workspace apps/api build
 
 # ---------- Runtime ----------
@@ -29,7 +29,7 @@ WORKDIR /app/apps/api
 # Copy API manifest
 COPY --from=build /app/apps/api/package*.json ./
 
-# Copy node_modules
+# Copy node_modules (workspace-aware)
 COPY --from=build /app/node_modules /app/node_modules
 
 # Copy dist + prisma
